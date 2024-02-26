@@ -1,0 +1,134 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <pthread.h>
+#include <unistd.h>
+
+#define NUM_PROCESSES 3
+#define NUM_RESOURCES 3
+
+int available_resources[NUM_RESOURCES];
+int maximum_demand[NUM_PROCESSES][NUM_RESOURCES];
+int allocated_resources[NUM_PROCESSES][NUM_RESOURCES];
+int need[NUM_PROCESSES][NUM_RESOURCES];
+pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
+
+void initializeSystem() {
+    // Initialize available resources
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        printf("Enter the total number of available resources for resource %d: ", i + 1);
+        scanf("%d", &available_resources[i]);
+    }
+
+    // Initialize maximum demand and allocation matrices
+    for (int i = 0; i < NUM_PROCESSES; ++i) {
+        printf("Enter the maximum demand for Process %d:\n", i + 1);
+        for (int j = 0; j < NUM_RESOURCES; ++j) {
+            scanf("%d", &maximum_demand[i][j]);
+            allocated_resources[i][j] = 0;
+            need[i][j] = maximum_demand[i][j];
+        }
+    }
+}
+
+void printState() {
+    printf("\nCurrent System State:\n");
+
+    printf("Available Resources: [");
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        printf(" %d", available_resources[i]);
+    }
+    printf(" ]\n");
+
+    printf("Maximum Demand Matrix:\n");
+    for (int i = 0; i < NUM_PROCESSES; ++i) {
+        printf("Process %d:", i + 1);
+        for (int j = 0; j < NUM_RESOURCES; ++j) {
+            printf(" %d", maximum_demand[i][j]);
+        }
+        printf("\n");
+    }
+
+    printf("Allocated Resources Matrix:\n");
+    for (int i = 0; i < NUM_PROCESSES; ++i) {
+        printf("Process %d:", i + 1);
+        for (int j = 0; j < NUM_RESOURCES; ++j) {
+            printf(" %d", allocated_resources[i][j]);
+        }
+        printf("\n");
+    }
+
+    printf("Need Matrix:\n");
+    for (int i = 0; i < NUM_PROCESSES; ++i) {
+        printf("Process %d:", i + 1);
+        for (int j = 0; j < NUM_RESOURCES; ++j) {
+            printf(" %d", need[i][j]);
+        }
+        printf("\n");
+    }
+    printf("\n");
+}
+
+int requestResources(int process_id, int request[]) {
+    pthread_mutex_lock(&mutex);
+
+    // Check if the request is valid
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        if (request[i] > need[process_id][i] || request[i] > available_resources[i]) {
+            pthread_mutex_unlock(&mutex);
+            return 0; // Invalid request
+        }
+    }
+
+    // Try to allocate resources temporarily
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        available_resources[i] -= request[i];
+        allocated_resources[process_id][i] += request[i];
+        need[process_id][i] -= request[i];
+    }
+
+    // Check for safety
+    if (!isSafe()) {
+        // Rollback changes and reject the request
+        for (int i = 0; i < NUM_RESOURCES; ++i) {
+            available_resources[i] += request[i];
+            allocated_resources[process_id][i] -= request[i];
+            need[process_id][i] += request[i];
+        }
+
+        pthread_mutex_unlock(&mutex);
+        return 0; // Unsafe state, request rejected
+    }
+
+    printState();
+    pthread_mutex_unlock(&mutex);
+    return 1; // Request granted
+}
+
+void releaseResources(int process_id, int release[]) {
+    pthread_mutex_lock(&mutex);
+
+    // Release resources
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        available_resources[i] += release[i];
+        allocated_resources[process_id][i] -= release[i];
+        need[process_id][i] += release[i];
+    }
+
+    printState();
+    pthread_mutex_unlock(&mutex);
+}
+
+int isSafe() {
+    int work[NUM_RESOURCES];
+    int finish[NUM_PROCESSES];
+
+    for (int i = 0; i < NUM_RESOURCES; ++i) {
+        work[i] = available_resources[i];
+    }
+
+    for (int i = 0; i < NUM_PROCESSES; ++i) {
+        finish[i] = 0;
+    }
+
+    int count = 0
+}
